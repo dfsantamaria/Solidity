@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: Daniele Francesco Santamaria daniele.santamaria@unict.it
+// SPDX-License-Identifier: GPL-3.0
+//Author:Daniele Francesco Santamaria daniele.santamaria@unict.it
 pragma solidity ^0.8.0;
 
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/interfaces/IERC721.sol";
