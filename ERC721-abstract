@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 //Author:Daniele Francesco Santamaria daniele.santamaria@unict.it
+
 pragma solidity ^0.8.0;
 
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/interfaces/IERC721.sol";
@@ -22,6 +23,45 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
 {
     using SafeMath for uint256;
     using Address for address;
+
+    // Event list    
+    event Pause(address account);
+    event Unpause(address account);    
+    event Mint(address to, uint256 tokenId);
+    event Burned(uint256 tokenId);
+    //event Transfer(address from, address to, uint256 tokenId);
+    //event Approval(address from, address to, uint256 tokenId);
+    //event ApprovalForAll(address owner, address operator, bool approved);
+
+    /*
+    Modifier
+    */
+
+    /*
+     Ensure that the caller is the owner.
+     */ 
+    modifier onlyOwner()
+     {
+        require(isOwner(), "Ownable: caller is not the owner");
+        _;
+     }
+
+    /*
+     Ensure that the contract is not paused.
+     */
+    modifier whenNotPaused() {
+        require(!_paused, "Pausable: paused");
+        _;
+    }
+
+     /*
+     Ensure that the contract is not paused.
+     */
+    modifier whenPaused() {
+        require(_paused, "Pausable: not paused");
+        _;
+    }
+
 
     //the contract owner
     address private _owner;
@@ -58,36 +98,19 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
      /**
      * @dev See {IERC721-approve}.
      */
-    function approve(address to, uint256 tokenId) public virtual override
+    function approve(address to, uint256 tokenId) public virtual override whenNotPaused
      {
         address owner = ownerOf(tokenId);
         require(to != owner, "ERC721: approval to current owner");
         require(_msgSender() == owner || isApprovedForAll(owner, _msgSender()),"ERC721: approve caller is not owner nor approved for all");
          _approve(to, tokenId);
      }
-
-    /**
-     * @dev See {IERC721-getApproved}.
-     */
-    function getApproved(uint256 tokenId) public view virtual override returns (address)
-    {      
-        require(_exists(tokenId), "ERC721: approved query for nonexistent token");
-        return _tokenApprovals[tokenId];    
-    }
+    
   
-    
-    /**
-     * @dev See {IERC721-isApprovedForAll}.
-     */
-    function isApprovedForAll(address owner, address operator) public view virtual override returns (bool)
-     {
-       return _operatorApprovals[owner][operator];   
-     }
-    
      /**
      * @dev See {IERC721-transferFrom}.
      */
-    function transferFrom(address from, address to, uint256 tokenId) public virtual override
+    function transferFrom(address from, address to, uint256 tokenId) public virtual override whenNotPaused
      {
         require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");
         _transfer(from, to, tokenId);
@@ -96,7 +119,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
      /**
      * @dev See {IERC721-safeTransferFrom}.
      */     
-    function safeTransferFrom(address from, address to, uint256 tokenId ) public virtual override
+    function safeTransferFrom(address from, address to, uint256 tokenId ) public virtual override whenNotPaused
      {
        safeTransferFrom(from, to, tokenId, "");  
      }
@@ -104,7 +127,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
     /**
      * @dev See {IERC721-safeTransferFrom}.
      */
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) public virtual override
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) public virtual override whenNotPaused
      {
          require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");
         _safeTransfer(from, to, tokenId, _data);
@@ -113,15 +136,74 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
     /**
      * @dev See {IERC721-setApprovalForAll}.
      */
-    function setApprovalForAll(address operator, bool approved) public virtual override
+    function setApprovalForAll(address operator, bool approved) public virtual override whenNotPaused
     {
       _setApprovalForAll(_msgSender(), operator, approved);
     }
 
+
+    /*
+    * Pause the contract
+    */
+    function pause() public onlyOwner whenNotPaused
+    {
+        _paused = true;
+        emit Pause(msg.sender);
+    }
+
+    // Unpause the contract
+    function unpause()  public onlyOwner  whenPaused
+    {
+        _paused = false;
+        emit Unpause(msg.sender);
+    }
     
+   /*
+   * Destroy this smart contract and withdraw balance to owner
+	*/
+   function shutdown() public	onlyOwner
+	{
+      selfdestruct(payable(msg.sender));
+   }
+
+   /*
+      External
+   */
+    
+    /*
+    *  Allows the owner to catch the balance available in the contract.
+    */
+    function withdrawBalance()  external onlyOwner
+    {
+       payable(msg.sender).transfer(address (this).balance);
+    }
+
+
+
+
     /*
        View functions
     */
+
+
+     /**
+     * @dev See {IERC721-isApprovedForAll}.
+     */
+    function isApprovedForAll(address owner, address operator) public view virtual override returns (bool)
+     {
+       return _operatorApprovals[owner][operator];   
+     }
+    
+
+     /**
+     * @dev See {IERC721-getApproved}.
+     */
+    function getApproved(uint256 tokenId) public view virtual override returns (address) 
+    {      
+        require(_exists(tokenId), "ERC721: approved query for nonexistent token");
+        return _tokenApprovals[tokenId];    
+    }
+
 
      /**
      * @dev See {IERC721-balanceOf}.
@@ -180,6 +262,26 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
         return owner; 
     }
 
+    /*
+    * Returns true if the caller is the current owner.
+    */
+    function isOwner() public  view returns (bool)
+    {
+        return msg.sender == _owner;
+    }
+
+     /**
+     * Returns the pause state of the contract
+     */
+    function isPaused() public view returns (bool)
+    {
+      return _paused;
+    }  
+
+     
+    /*
+    Internal
+    */
     
     /**
      * @dev Returns whether `tokenId` exists.
@@ -193,12 +295,6 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
      {
         return _owners[tokenId] != address(0);
      }
-
-
-    /*
-    Internal
-    */
-   
 
     /**
      * @dev Safely mints `tokenId` and transfers it to `to`.
@@ -247,7 +343,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
         _balances[to] += 1;
         _owners[tokenId] = to;
 
-        emit Transfer(address(0), to, tokenId);
+        emit Mint(to, tokenId);
 
         _afterTokenTransfer(address(0), to, tokenId);
     }
