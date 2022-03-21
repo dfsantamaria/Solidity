@@ -28,7 +28,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
     event Pause(address account);
     event Unpause(address account);    
     event Mint(address to, uint256 tokenId);
-    event Burned(uint256 tokenId);
+    event Burn(address owner, uint256 tokenId);
     //event Transfer(address from, address to, uint256 tokenId);
     //event Approval(address from, address to, uint256 tokenId);
     //event ApprovalForAll(address owner, address operator, bool approved);
@@ -304,7 +304,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
      * - `tokenId` must not exist.
      * - If `to` refers to a smart contract, it must implement {IERC721Receiver-onERC721Received}, which is called upon a safe transfer.
      *
-     * Emits a {Transfer} event.
+     * Emits a {Mint} event.
      */
     function _safeMint(address to, uint256 tokenId) internal virtual
     {
@@ -331,7 +331,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
      * - `tokenId` must not exist.
      * - `to` cannot be the zero address.
      *
-     * Emits a {Transfer} event.
+     * Emits a {Mint} event.
      */
     function _mint(address to, uint256 tokenId) internal virtual
      {
@@ -356,7 +356,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
      *
      * - `tokenId` must exist.
      *
-     * Emits a {Transfer} event.
+     * Emits a {Burn} event.
      */
     function _burn(uint256 tokenId) internal virtual
      {
@@ -366,7 +366,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
         _approve(address(0), tokenId);
         _balances[owner] -= 1;
         delete _owners[tokenId];
-        emit Transfer(owner, address(0), tokenId);
+        emit Burn(owner, tokenId);
         _afterTokenTransfer(owner, address(0), tokenId);
     }
 
@@ -506,7 +506,6 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
             return true;
         }
     }
-
 
      /**
      * @dev Hook that is called before any token transfer. This includes minting
