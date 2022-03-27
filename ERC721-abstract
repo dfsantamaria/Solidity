@@ -24,6 +24,16 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
     using SafeMath for uint256;
     using Address for address;
 
+   
+    //the contract owner
+    address private _owner;
+    //the contract name
+    string _name;
+    //the contract symbol
+    string _symbol;
+    //the contract pause state
+    bool private _paused;   
+
     // Event list    
     event Pause(address account);
     event Unpause(address account);    
@@ -63,16 +73,6 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
     }
 
 
-    //the contract owner
-    address private _owner;
-    //the contract name
-    string _name;
-    //the contract symbol
-    string _symbol;
-    //the contract pause state
-    bool private _paused;   
-
-
     // Mapping from token ID to owner address
     mapping(uint256 => address) private _owners;
 
@@ -95,6 +95,26 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
     }
 
    
+
+      function mint(address to, uint256 tokenId) public virtual whenNotPaused
+      {
+       _mint(to,tokenId);
+       emit Mint(to, tokenId);
+      }  
+
+     function safeMint(address to, uint256 tokenId) public virtual whenNotPaused
+      {
+       _safeMint(to,tokenId);
+       emit Mint(to, tokenId);
+      } 
+
+      function burn(uint256 tokenId) public virtual whenNotPaused
+      {
+        address owner = ownerOf(tokenId); 
+        _burn(tokenId, owner);
+        emit Burn(owner, tokenId);        
+      }
+
      /**
      * @dev See {IERC721-approve}.
      */
@@ -111,9 +131,9 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
      * @dev See {IERC721-transferFrom}.
      */
     function transferFrom(address from, address to, uint256 tokenId) public virtual override whenNotPaused
-     {
-        require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");
+     {        
         _transfer(from, to, tokenId);
+        emit Transfer(from, to, tokenId);
      }
 
      /**
@@ -341,9 +361,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
         _beforeTokenTransfer(address(0), to, tokenId);
 
         _balances[to] += 1;
-        _owners[tokenId] = to;
-
-        emit Mint(to, tokenId);
+        _owners[tokenId] = to;        
 
         _afterTokenTransfer(address(0), to, tokenId);
     }
@@ -358,15 +376,13 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
      *
      * Emits a {Burn} event.
      */
-    function _burn(uint256 tokenId) internal virtual
-     {
-        address owner = ownerOf(tokenId);
+    function _burn(uint256 tokenId, address owner) internal virtual
+     {        
         _beforeTokenTransfer(owner, address(0), tokenId);
         // Clear approvals
         _approve(address(0), tokenId);
         _balances[owner] -= 1;
-        delete _owners[tokenId];
-        emit Burn(owner, tokenId);
+        delete _owners[tokenId];        
         _afterTokenTransfer(owner, address(0), tokenId);
     }
 
@@ -410,6 +426,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
      */
     function _transfer(address from, address to, uint256 tokenId) internal virtual
      {
+        require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");
         require(ownerOf(tokenId) == from, "ERC721: transfer from incorrect owner");
         require(to != address(0), "ERC721: transfer to the zero address");
         _beforeTokenTransfer(from, to, tokenId);
@@ -417,8 +434,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
         _approve(address(0), tokenId);
         _balances[from] -= 1;
         _balances[to] += 1;
-        _owners[tokenId] = to;
-        emit Transfer(from, to, tokenId);
+        _owners[tokenId] = to;        
         _afterTokenTransfer(from, to, tokenId);
     }
 
@@ -506,6 +522,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
             return true;
         }
     }
+
 
      /**
      * @dev Hook that is called before any token transfer. This includes minting
