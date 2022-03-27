@@ -15,8 +15,8 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contr
 
 /*
    Remember to update function _baseURI()
-   Remember to modify _mint()
-   Remember to modify _burn()
+   Remember to update mint()
+   Remember to update burn()
 */
 
 contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
