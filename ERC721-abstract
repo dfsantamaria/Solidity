@@ -74,6 +74,9 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
         _;
     }
 
+     /*
+     Ensure the existence of the given token.
+     */
     modifier tokenExist(uint256 tokenId)
     {
        require(_exists(tokenId), "ERC721: non-existing token");
@@ -82,9 +85,6 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
 
     //Mapping from hash to token ID
     mapping(bytes32 => uint) tokenHashToId;
-
-    //Mapping from token ID to activation status
-    mapping(uint256 => bool) private _active;
 
     // Mapping from token ID to owner address
     mapping(uint256 => address) private _owners;
@@ -117,9 +117,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
         require(!_existsHash(_hash), "ERC721: token already minted");
         mytokens.push(token);       
         uint256 tokenId = mytokens.length-1;
-        tokenHashToId[_hash] = tokenId; 
-        _active[tokenId] = true;     
-       
+        tokenHashToId[_hash] = tokenId;        
         _beforeTokenTransfer(address(0), to, tokenId);
         _balances[to] += 1;
         _owners[tokenId] = to;        
@@ -321,7 +319,15 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
       return _paused;
     }  
 
-     
+    function tokenInfo(uint256 tokenId) public view returns (uint256, address) 
+     {
+         require(!_paused, "Pausable: paused");
+         require(tokenId<mytokens.length, "Token never minted");
+         if(mytokens[tokenId] ==0 )
+           return(0,address(0));
+         return(mytokens[tokenId], _owners[tokenId]);
+     }
+
     /*
     Internal
     */
@@ -335,10 +341,8 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
      * and stop existing when they are burned (`_burn`).
      */
     function _exists(uint256 tokenId) internal view virtual returns (bool)
-     {
-         if (_active[tokenId] == false)        
-           return false;       
-         return _owners[tokenId] != address(0);
+     {                
+         return tokenId<mytokens.length && mytokens[tokenId] != 0;
      }
        
      function _existsHash(bytes32 hash) internal view virtual returns (bool)
@@ -364,8 +368,10 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
         _approve(address(0), tokenId);
         _balances[owner] = SafeMath.sub(_balances[owner], 1);
         delete _owners[tokenId];   
-        delete mytokens[tokenId];     
-        _active[tokenId] = false;        
+        uint256 token=mytokens[tokenId];
+        bytes32 hash = keccak256(abi.encodePacked(token));
+        tokenHashToId[hash]=0;
+        delete mytokens[tokenId];                
         _afterTokenTransfer(owner, address(0), tokenId);
     }
 
