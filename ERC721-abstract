@@ -25,7 +25,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
     using Address for address;
 
     //the set of tokens - to be customized -
-    uint256 [] public mytokens;
+    uint256 [] private mytokens;
     //the contract owner
     address private _owner;
     //the contract name
@@ -74,8 +74,17 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
         _;
     }
 
+    modifier tokenExist(uint256 tokenId)
+    {
+       require(_exists(tokenId), "ERC721: non-existing token");
+       _;
+    }
+
     //Mapping from hash to token ID
     mapping(bytes32 => uint) tokenHashToId;
+
+    //Mapping from token ID to activation status
+    mapping(uint256 => bool) private _active;
 
     // Mapping from token ID to owner address
     mapping(uint256 => address) private _owners;
@@ -96,19 +105,20 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
        _owner= msg.sender;       
        _paused = false;
        //mint the first token
-       mint(_owner,0);
+       //mint(_owner, 0);
     }
 
    
 
       function mint(address to, uint256 token) public virtual whenNotPaused
       {
-        require(to != address(0), "ERC721: mint to the zero address");
-       // require(!_exists(tokenId), "ERC721: token already minted");
+        require(to != address(0), "ERC721: mint to the zero address");       
         bytes32 _hash = keccak256(abi.encodePacked(token));
-        mytokens.push(token);
+        require(!_existsHash(_hash), "ERC721: token already minted");
+        mytokens.push(token);       
         uint256 tokenId = mytokens.length-1;
-        tokenHashToId[_hash] = tokenId;       
+        tokenHashToId[_hash] = tokenId; 
+        _active[tokenId] = true;     
        
         _beforeTokenTransfer(address(0), to, tokenId);
         _balances[to] += 1;
@@ -121,8 +131,8 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
       }  
 
 
-      function burn(uint256 tokenId) public virtual whenNotPaused
-      {
+      function burn(uint256 tokenId) public virtual whenNotPaused tokenExist(tokenId)
+      {       
         address owner = ownerOf(tokenId); 
         _burn(tokenId, owner);
         emit Burn(owner, tokenId);        
@@ -131,8 +141,9 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
      /**
      * @dev See {IERC721-approve}.
      */
-    function approve(address to, uint256 tokenId) public virtual override whenNotPaused
+    function approve(address to, uint256 tokenId) public virtual override whenNotPaused tokenExist(tokenId)
      {
+               
         address owner = ownerOf(tokenId);
         require(to != owner, "ERC721: approval to current owner");
         require(_msgSender() == owner || isApprovedForAll(owner, _msgSender()),"ERC721: approve caller is not owner nor approved for all");
@@ -143,7 +154,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
      /**
      * @dev See {IERC721-transferFrom}.
      */
-    function transferFrom(address from, address to, uint256 tokenId) public virtual override whenNotPaused
+    function transferFrom(address from, address to, uint256 tokenId) public virtual override whenNotPaused tokenExist(tokenId)
      {        
         _transfer(from, to, tokenId);
         emit Transfer(from, to, tokenId);
@@ -152,7 +163,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
      /**
      * @dev See {IERC721-safeTransferFrom}.
      */     
-    function safeTransferFrom(address from, address to, uint256 tokenId ) public virtual override whenNotPaused
+    function safeTransferFrom(address from, address to, uint256 tokenId ) public virtual override whenNotPaused tokenExist(tokenId)
      {
        safeTransferFrom(from, to, tokenId, "");  
      }
@@ -160,7 +171,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
     /**
      * @dev See {IERC721-safeTransferFrom}.
      */
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) public virtual override whenNotPaused
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) public virtual override whenNotPaused tokenExist(tokenId)
      {
        _safeTransfer(from, to, tokenId, _data);
      }
@@ -325,13 +336,17 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
      */
     function _exists(uint256 tokenId) internal view virtual returns (bool)
      {
-        // if (mytokens[tokenId].active == false)
-        //  {
-        //   return false;
-        // }
-        return _owners[tokenId] != address(0);
+         if (_active[tokenId] == false)        
+           return false;       
+         return _owners[tokenId] != address(0);
      }
        
+     function _existsHash(bytes32 hash) internal view virtual returns (bool)
+     {
+        return (tokenHashToId[hash]!=0);       
+     }
+
+
     /**
      * @dev Destroys `tokenId`.
      * The approval is cleared when the token is burned.
@@ -350,6 +365,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
         _balances[owner] = SafeMath.sub(_balances[owner], 1);
         delete _owners[tokenId];   
         delete mytokens[tokenId];     
+        _active[tokenId] = false;        
         _afterTokenTransfer(owner, address(0), tokenId);
     }
 
