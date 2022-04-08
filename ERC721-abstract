@@ -17,6 +17,7 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contr
    Remember to update function _baseURI()
    Remember to update mint()
    Remember to update burn()
+   Remember to modify _tokens
 */
 
 contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
@@ -25,7 +26,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
     using Address for address;
 
     //the set of tokens - to be customized -
-    uint256 [] private mytokens;
+    uint256 [] private _tokens;
     //the contract owner
     address private _owner;
     //the contract name
@@ -115,8 +116,8 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
         require(to != address(0), "ERC721: mint to the zero address");       
         bytes32 _hash = keccak256(abi.encodePacked(token));
         require(!_existsHash(_hash), "ERC721: token already minted");
-        mytokens.push(token);       
-        uint256 tokenId = mytokens.length-1;
+        _tokens.push(token);       
+        uint256 tokenId = _tokens.length-1;
         tokenHashToId[_hash] = tokenId;        
         _beforeTokenTransfer(address(0), to, tokenId);
         _balances[to] += 1;
@@ -322,10 +323,10 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
     function tokenInfo(uint256 tokenId) public view returns (uint256, address) 
      {
          require(!_paused, "Pausable: paused");
-         require(tokenId<mytokens.length, "Token never minted");
-         if(mytokens[tokenId] ==0 )
+         require(tokenId<_tokens.length, "Token never minted");
+         if(_tokens[tokenId] ==0 )
            return(0,address(0));
-         return(mytokens[tokenId], _owners[tokenId]);
+         return(_tokens[tokenId], _owners[tokenId]);
      }
 
     /*
@@ -342,7 +343,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
      */
     function _exists(uint256 tokenId) internal view virtual returns (bool)
      {                
-         return tokenId<mytokens.length && mytokens[tokenId] != 0;
+         return tokenId<_tokens.length && _tokens[tokenId] != 0;
      }
        
      function _existsHash(bytes32 hash) internal view virtual returns (bool)
@@ -368,10 +369,10 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
         _approve(address(0), tokenId);
         _balances[owner] = SafeMath.sub(_balances[owner], 1);
         delete _owners[tokenId];   
-        uint256 token=mytokens[tokenId];
+        uint256 token=_tokens[tokenId];
         bytes32 hash = keccak256(abi.encodePacked(token));
         tokenHashToId[hash]=0;
-        delete mytokens[tokenId];                
+        delete _tokens[tokenId];                
         _afterTokenTransfer(owner, address(0), tokenId);
     }
 
