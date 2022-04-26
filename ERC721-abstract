@@ -41,6 +41,7 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
     event Unpause(address account);    
     event Mint(address to, uint256 tokenId);
     event Burn(address owner, uint256 tokenId);
+    event ChangeOwnership(address oldowner, address newowner);
     //event Transfer(address from, address to, uint256 tokenId);
     //event Approval(address from, address to, uint256 tokenId);
     //event ApprovalForAll(address owner, address operator, bool approved);
@@ -220,7 +221,11 @@ contract ERC721 is Context, IERC721, ERC165, IERC721Metadata
        payable(msg.sender).transfer(address (this).balance);
     }
 
-
+    function transferOwnership(address newowner) external onlyOwner
+    {
+        _owner=newowner;
+        emit ChangeOwnership(msg.sender, newowner);
+    }
 
 
     /*
